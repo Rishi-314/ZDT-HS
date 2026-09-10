@@ -1,3 +1,6 @@
 spring:
   application:
     name: ZDT-HS
+
+server:
+  port: 8081
