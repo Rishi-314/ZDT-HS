@@ -2,6 +2,8 @@ package com.EDI.ZDT_HS.lifecycle;
 
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,10 +16,29 @@ public class NaiveVersionManager {
     private final ConcurrentHashMap<String, ModelVersion> versions = new ConcurrentHashMap<>();
     private final AtomicReference<String> currentVersionId = new AtomicReference<>();
 
+    private final MeterRegistry registry;
+    private final Counter loadCounter;
+    private final Counter swapCounter;
+    private final Counter evictCounter;
+
+    public NaiveVersionManager(MeterRegistry registry) {
+        this.registry = registry;
+        this.loadCounter  = Counter.builder("model.load.count")
+                .description("Number of model versions loaded")
+                .register(registry);
+        this.swapCounter  = Counter.builder("model.swap.count")
+                .description("Number of hot swaps performed")
+                .register(registry);
+        this.evictCounter = Counter.builder("model.evict.count")
+                .description("Number of model versions evicted")
+                .register(registry);
+    }
+
     public void loadVersion(String versionId, String modelPath) throws Exception {
         OrtSession session = env.createSession(modelPath, new OrtSession.SessionOptions());
-        ModelVersion version = new ModelVersion(versionId, session, env);
+        ModelVersion version = new ModelVersion(versionId, session, env, registry);
         versions.put(versionId, version);
+        loadCounter.increment();
         System.out.println(">>> Loaded model version: " + versionId + " from " + modelPath);
     }
 
@@ -26,6 +47,7 @@ public class NaiveVersionManager {
             throw new IllegalArgumentException("Version not loaded: " + versionId);
         }
         String previousId = currentVersionId.getAndSet(versionId);
+        swapCounter.increment();
         System.out.println(">>> Swapped current version: " + previousId + " -> " + versionId);
         if (previousId != null && !previousId.equals(versionId)) {
             ModelVersion previous = versions.get(previousId);
@@ -50,5 +72,9 @@ public class NaiveVersionManager {
 
     public String getCurrentVersionId() {
         return currentVersionId.get();
+    }
+
+    public java.util.Set<String> getLoadedVersionIds() {
+        return versions.keySet();
     }
 }
