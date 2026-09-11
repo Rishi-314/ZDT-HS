@@ -23,10 +23,10 @@ public class NaiveVersionManager {
 
     public NaiveVersionManager(MeterRegistry registry) {
         this.registry = registry;
-        this.loadCounter  = Counter.builder("model.load.count")
+        this.loadCounter = Counter.builder("model.load.count")
                 .description("Number of model versions loaded")
                 .register(registry);
-        this.swapCounter  = Counter.builder("model.swap.count")
+        this.swapCounter = Counter.builder("model.swap.count")
                 .description("Number of hot swaps performed")
                 .register(registry);
         this.evictCounter = Counter.builder("model.evict.count")
@@ -43,8 +43,13 @@ public class NaiveVersionManager {
     }
 
     public void swapTo(String versionId) {
-        if (!versions.containsKey(versionId)) {
+        ModelVersion target = versions.get(versionId);
+        if (target == null) {
             throw new IllegalArgumentException("Version not loaded: " + versionId);
+        }
+        if (!target.isAlive()) {
+            throw new IllegalStateException(
+                    "Version " + versionId + " has been evicted and cannot be swapped to");
         }
         String previousId = currentVersionId.getAndSet(versionId);
         swapCounter.increment();

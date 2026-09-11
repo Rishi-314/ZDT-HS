@@ -61,6 +61,9 @@ public class ModelVersion {
             System.err.println(">>> Eviction failed for " + versionId + ": " + e.getMessage());
         }
     }
+    public boolean isAlive() {
+        return !markedForEviction;
+    }
 
     public OrtSession getSession()         { return session; }
     public OrtEnvironment getEnvironment() { return environment; }

@@ -1,15 +1,17 @@
 package com.EDI.ZDT_HS.inference;
 
-import ai.onnxruntime.OnnxTensor;
-import ai.onnxruntime.OrtEnvironment;
-import ai.onnxruntime.OrtSession;
-import com.EDI.ZDT_HS.lifecycle.ModelVersion;
-import com.EDI.ZDT_HS.lifecycle.NaiveVersionManager;
-import org.springframework.stereotype.Service;
-
 import java.nio.FloatBuffer;
 import java.util.Collections;
 import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
+import com.EDI.ZDT_HS.lifecycle.ModelVersion;
+import com.EDI.ZDT_HS.lifecycle.NaiveVersionManager;
+
+import ai.onnxruntime.OnnxTensor;
+import ai.onnxruntime.OrtEnvironment;
+import ai.onnxruntime.OrtSession;
 
 @Service
 public class InferenceService {
@@ -21,8 +23,16 @@ public class InferenceService {
     }
 
     public float[] infer(float[] inputData, long[] inputShape) throws Exception {
+        return infer(inputData, inputShape, 0L);
+    }
+
+    public float[] infer(float[] inputData, long[] inputShape, long sleepMs) throws Exception {
         ModelVersion version = versionManager.getCurrentVersion();
         try {
+            if (sleepMs > 0) {
+                Thread.sleep(sleepMs);
+            }
+
             OrtEnvironment env = version.getEnvironment();
             String inputName = version.getSession().getInputNames().iterator().next();
 
