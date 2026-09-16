@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ZDT-HS Dashboard</title>
+<style>
+  :root {
+    --bg:      #0b1220;
+    --panel:   #111a2e;
+    --panel-2: #0f1729;
+    --border:  #1e2a44;
+    --text:    #dbe4f5;
+    --muted:   #7a8ba8;
+    --accent:  #4fd1ff;
+    --ok:      #36d399;
+    --warn:    #fbbd23;
+    --err:     #f87272;
+    --mono:    ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  h2 {
+    font-size: 12px; margin: 0 0 12px 0; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .status {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.up   { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.down { background: var(--err); box-shadow: 0 0 8px var(--err); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+  }
+  .value {
+    font-family: var(--mono); font-size: 28px; font-weight: 600;
+    color: var(--accent); margin-top: 4px;
+  }
+  .value.small { font-size: 20px; }
+  .unit { font-size: 14px; color: var(--muted); margin-left: 4px; font-weight: 400; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; padding: 3px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .5px;
+  }
+  .badge.alive  { background: rgba(54,211,153,.12); color: var(--ok); }
+  .badge.marked { background: rgba(251,189,35,.12); color: var(--warn); }
+  .badge.zero   { background: rgba(122,139,168,.12); color: var(--muted); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  button {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 16px; font-family: var(--mono); font-size: 12px;
+    cursor: pointer; transition: all .15s ease;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.danger { border-color: #4a1f2a; }
+  button.danger:hover { border-color: var(--err); color: var(--err); }
+  .log {
+    background: #060c18; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; font-family: var(--mono); font-size: 12px;
+    height: 220px; overflow-y: auto; line-height: 1.7;
+  }
+  .log .t { color: var(--muted); margin-right: 10px; }
+  .log .ok { color: var(--ok); }
+  .log .err { color: var(--err); }
+  .log .info { color: var(--accent); }
+  .findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+  .finding { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 6px; padding: 12px 16px; }
+  .finding.fixed    { border-left-color: var(--ok); }
+  .finding.open     { border-left-color: var(--err); }
+  .finding .title   { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .finding .meta    { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .finding .body    { font-size: 13px; color: var(--text); line-height: 1.5; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ZDT-HS · Live Dashboard</h1>
+  <span class="status"><span id="dot" class="dot"></span><span id="statusText">connecting…</span></span>
+  <span class="status" id="pidText"></span>
+</header>
+
+<!-- Primary counters -->
+<div class="grid">
+  <div class="card">
+    <h2>Current version</h2>
+    <div class="value small" id="currentVersion">—</div>
+  </div>
+  <div class="card">
+    <h2>Loads</h2>
+    <div class="value" id="loadCount">—</div>
+  </div>
+  <div class="card">
+    <h2>Swaps</h2>
+    <div class="value" id="swapCount">—</div>
+  </div>
+  <div class="card">
+    <h2>Evictions</h2>
+    <div class="value" id="evictCount">—</div>
+  </div>
+</div>
+
+<!-- Memory -->
+<div class="grid">
+  <div class="card">
+    <h2>Heap used</h2>
+    <div class="value" id="heapUsed">—<span class="unit" id="heapMax"></span></div>
+  </div>
+  <div class="card">
+    <h2>Working set</h2>
+    <div class="value" id="workingSet">—</div>
+  </div>
+  <div class="card">
+    <h2>NMT committed</h2>
+    <div class="value" id="nmt">—</div>
+  </div>
+</div>
+
+<!-- Loaded versions table -->
+<div class="card" style="margin-bottom:24px;">
+  <h2>Loaded versions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Version</th>
+        <th>Instance</th>
+        <th>Active requests</th>
+        <th>Marked for eviction</th>
+        <th>State</th>
+      </tr>
+    </thead>
+    <tbody id="versionsBody">
+      <tr><td colspan="5" style="color:var(--muted);">no data</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Controls -->
+<h2>Controls</h2>
+<div class="buttons">
+  <button onclick="act('/admin/models/load?versionId=v1&path=src/main/resources/models/model-v1.onnx','POST')">Load v1</button>
+  <button onclick="act('/admin/models/load?versionId=v2&path=src/main/resources/models/model-v2.onnx','POST')">Load v2</button>
+  <button onclick="act('/admin/models/swap?versionId=v1','POST')">Swap → v1</button>
+  <button onclick="act('/admin/models/swap?versionId=v2','POST')">Swap → v2</button>
+  <button onclick="infer(false)">Fast infer</button>
+  <button class="danger" onclick="infer(true)">Slow infer (5s)</button>
+</div>
+
+<!-- Log -->
+<h2>Activity log</h2>
+<div class="log" id="log"></div>
+
+<!-- Findings -->
+<h2 style="margin-top:24px;">Findings</h2>
+<div class="findings">
+  <div class="finding fixed">
+    <div class="meta">Finding 01 · Fixed</div>
+    <div class="title">Stale version swap causes 500</div>
+    <div class="body">Map retained evicted entries; swapTo checked existence, not liveness. Fixed by isAlive() guard + identity-checked map removal.</div>
+  </div>
+  <div class="finding fixed">
+    <div class="meta">Finding 02 · Fixed</div>
+    <div class="title">Micrometer gauge binding reuse</div>
+    <div class="body">Same (name, tags) returns the same meter; reloads silently discarded new bindings. Fixed by per-instance UUID tag + deregistration on evict.</div>
+  </div>
+  <div class="finding">
+    <div class="meta">Finding 03 · Baseline</div>
+    <div class="title">Exp A: fast traffic, no slow requests</div>
+    <div class="body">0 errors, ~11 MB growth. Concurrency alone is not the failure mode.</div>
+  </div>
+  <div class="finding open">
+    <div class="meta">Finding 04 · Open</div>
+    <div class="title">Unbounded pinning</div>
+    <div class="body">A slow request defers eviction by exactly its duration. Refcount is the only signal. Requires Stage 3 Fix 3 (timeout policy).</div>
+  </div>
+  <div class="finding open">
+    <div class="meta">Finding 05 · Open</div>
+    <div class="title">Pinning accumulates under load</div>
+    <div class="body">10% slow requests → eviction lag grew to 5. Memory cost invisible at MNIST scale; expected to matter for larger models.</div>
+  </div>
+  <div class="finding fixed">
+    <div class="meta">Finding 06 · Fixed</div>
+    <div class="title">Aggressive cadence retention</div>
+    <div class="body">+112 MB under 300ms swaps, fully recoverable via GC. Was JVM retention of orphans held by map + gauges. Fixed by Stage 3 Fixes 1+2.</div>
+  </div>
+</div>
+
+<script>
+const fmtMB = b => b < 0 ? '—' : (b / 1048576).toFixed(1) + ' MB';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function log(msg, cls='info') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  const t = new Date().toLocaleTimeString();
+  line.innerHTML = `<span class="t">${t}</span><span class="${cls}">${esc(msg)}</span>`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/dashboard/state');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const s = await r.json();
+
+    document.getElementById('dot').className = 'dot up';
+    document.getElementById('statusText').textContent = 'live';
+    document.getElementById('pidText').textContent = 'pid ' + s.pid;
+
+    document.getElementById('currentVersion').textContent = s.currentVersion || '—';
+    document.getElementById('loadCount').textContent  = s.counters.load.toFixed(0);
+    document.getElementById('swapCount').textContent  = s.counters.swap.toFixed(0);
+    document.getElementById('evictCount').textContent = s.counters.evict.toFixed(0);
+
+    document.getElementById('heapUsed').innerHTML =
+      (s.heapUsed / 1048576).toFixed(0) + '<span class="unit">of ' +
+      (s.heapMax / 1048576).toFixed(0) + ' MB</span>';
+    document.getElementById('workingSet').textContent = fmtMB(s.workingSetBytes);
+    document.getElementById('nmt').textContent        = fmtMB(s.nmtCommittedBytes);
+
+    const tbody = document.getElementById('versionsBody');
+    if (!s.versions || s.versions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);">none loaded</td></tr>';
+    } else {
+      tbody.innerHTML = s.versions.map(v => `
+        <tr>
+          <td>${esc(v.id)}</td>
+          <td style="color:var(--muted)">${esc(v.instance)}</td>
+          <td>${v.activeRequests}</td>
+          <td>${v.markedForEviction ? '<span class="badge marked">yes</span>' : '<span class="badge zero">no</span>'}</td>
+          <td>${v.alive
+                ? '<span class="badge alive">alive</span>'
+                : '<span class="badge marked">pinned</span>'}</td>
+        </tr>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('dot').className = 'dot down';
+    document.getElementById('statusText').textContent = 'offline';
+  }
+}
+
+async function act(path, method) {
+  log(`${method} ${path}`);
+  try {
+    const r = await fetch(path, { method });
+    const text = await r.text();
+    if (r.ok) log(`  → ${text}`, 'ok');
+    else      log(`  → HTTP ${r.status}: ${text}`, 'err');
+    refresh();
+  } catch (e) {
+    log(`  → error: ${e.message}`, 'err');
+  }
+}
+
+async function infer(slow) {
+  const url = slow ? '/infer/slow?sleepMs=5000' : '/infer';
+  const body = JSON.stringify({ data: new Array(784).fill(0), shape: [1,1,28,28] });
+  const t0 = performance.now();
+  log(`${slow ? 'SLOW' : 'FAST'} POST ${url}`);
+  try {
+    const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body });
+    const ms = Math.round(performance.now() - t0);
+    if (r.ok) log(`  → ok in ${ms} ms`, 'ok');
+    else      log(`  → HTTP ${r.status} in ${ms} ms`, 'err');
+    refresh();
+  } catch (e) {
+    log(`  → error: ${e.message}`, 'err');
+  }
+}
+
+log('dashboard started', 'info');
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>

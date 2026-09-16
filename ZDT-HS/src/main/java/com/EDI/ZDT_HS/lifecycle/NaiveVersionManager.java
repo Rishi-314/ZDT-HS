@@ -1,13 +1,14 @@
 package com.EDI.ZDT_HS.lifecycle;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.springframework.stereotype.Component;
+
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.stereotype.Component;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class NaiveVersionManager {
@@ -82,4 +83,7 @@ public class NaiveVersionManager {
     public java.util.Set<String> getLoadedVersionIds() {
         return versions.keySet();
     }
+    public java.util.Collection<ModelVersion> getLoadedVersions() {
+    return new java.util.ArrayList<>(versions.values());
+}
 }

@@ -1,40 +1,49 @@
-# Finding 03 — Experiment A: Fast Traffic + 98 Swaps
+# Finding 02 — Micrometer Gauge Registration Leak (Stale Binding)
 
 **Date:** 2026-09-12
 **Stage:** 2 (Experiment A)
-**Status:** Completed
+**Status:** Confirmed
 
-## Setup
+## Summary
 
-- 98 swaps over 200s (interval = 2s, alternate v1 ↔ v2)
-- 8 concurrent workers, ~3041 req/s, all hitting `/infer`
-- 662,024 requests total
-- NMT tracking enabled (`-XX:NativeMemoryTracking=summary`)
+Per-version Micrometer gauges are registered once per (name, tag set)
+in the MeterRegistry. When a ModelVersion with the same versionId is
+re-loaded after eviction, `Gauge.builder(...).tag("version", id).register(...)`
+returns the *existing* gauge — the new binding is discarded. The gauge
+therefore remains bound to the first ModelVersion object ever created
+with that ID, and reports that object's state forever.
 
-## Results
+## Observed
 
-| Time | Swaps | load | swap | evict | WS (MB) | PM (MB) | NMT (MB) |
-|------|-------|------|------|-------|---------|---------|----------|
-| t0   |  19   |  19  |  19  |  18   | 224.51  | 271.48  |  243     |
-| t100 |  68   |  68  |  68  |  67   | 228.00  | 271.96  |  238     |
-| t200 |  99   |  99  |  99  |  98   | 230.94  | 275.89  |  245     |
+After 68+ swaps, both v1 and v2 gauges report:
 
-## Observations
+  model.version.marked.for.eviction{version=v1} = 1.0
+  model.version.marked.for.eviction{version=v2} = 1.0
 
-- **Zero errors** in either the load or the swap loop.
-- **Eviction keeps up**: evict = load − 1 exactly throughout.
-  Refcount-based eviction is sufficient for the fast path.
-- **Memory growth is small and non-linear**: ~290 KB/swap during
-  warmup, then ~80 KB/swap in steady state.
-- **NMT sees ~2.7 MB of native growth that JVM metrics don't**.
-  That is the ONNX Runtime footprint outside JVM accounting —
-  confirms that NMT alone is insufficient for tracking native
-  model memory; process WorkingSet is the more reliable signal.
+...even though exactly one version is currently active (marked=0).
+The "1.0" values are stale bindings to the very first v1/v2 ModelVersion
+objects, which were evicted many cycles ago.
 
-## Verdict
+## Consequence
 
-The naive design does **not** fail under pure fast traffic,
-even with 98 concurrent hot swaps. This is a negative result but
-a useful one: it isolates the failure modes we're looking for
-to the *slow-request* and *concurrent-swap* scenarios (Experiments B
-and C).
+Post-first-eviction, per-version gauges are unusable for observing:
+- whether the current version is pinned by slow requests
+- how many requests are in flight for the currently-active version
+
+This invalidates any Stage 2 measurement that relies on these gauges
+unless the binding leak is fixed.
+
+## Root cause
+
+Micrometer's `register()` contract: identical (name, tags) yields the
+same Meter. Our code does not deregister the old gauge before
+registering a new one, and Micrometer does not provide first-class
+"remove by name+tags" until much later versions.
+
+## Stage 3 fix direction
+
+Options (not yet implemented):
+- Tag gauges with a per-instance unique ID (e.g. `instance`, UUID)
+  in addition to `version`.
+- Deregister via `registry.remove(gauge)` on evict.
+- Replace per-version gauges with a single MultiGauge rebuilt on demand.
