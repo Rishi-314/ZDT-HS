@@ -1,4 +1,4 @@
-# Finding 06 — Experiment C: Aggressive Cadence Causes JVM Retention (Not Native Leak)
+# Finding 06 — Experiment C: Aggressive Cadence Causes JVM Retention 
 
 **Date:** 2026-09-13
 **Stage:** 2 (Experiment C)
