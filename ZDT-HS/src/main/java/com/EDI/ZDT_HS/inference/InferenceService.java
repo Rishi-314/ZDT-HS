@@ -49,6 +49,14 @@ public class InferenceService {
                             "Unexpected output type: " + value.getClass());
                 }
             }
+        } catch (IllegalStateException e) {
+            String msg = e.getMessage();
+            if (msg != null && msg.toLowerCase().contains("closed")) {
+                throw new ModelRetiredException(
+                        version.getVersionId(),
+                        versionManager.getCurrentVersionId());
+            }
+            throw e;
         } finally {
             version.release();
         }
