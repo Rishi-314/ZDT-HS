@@ -27,6 +27,7 @@ $lines += "--- Counters ---"
 $lines += "model.load.count           = $(Get-Metric 'model.load.count')"
 $lines += "model.swap.count           = $(Get-Metric 'model.swap.count')"
 $lines += "model.evict.count          = $(Get-Metric 'model.evict.count')"
+$lines += "model.forced.evict.count   = $(Get-Metric 'model.forced.evict.count')"
 $lines += ""
 $lines += "--- Gauges per version ---"
 foreach ($v in @('v1','v2')) {
