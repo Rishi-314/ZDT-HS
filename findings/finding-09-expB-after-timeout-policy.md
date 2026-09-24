@@ -19,7 +19,7 @@ Identical to Stage 2's Experiment B:
 
 ## Results
 
-| Metric | Stage 2 (naive) | Stage 3 (fixed) |
+| Metric | Stage 2 (Acumos) | Stage 3 (fixed) |
 |---|---|---|
 | Requests ok | 2,969 | 2,865 |
 | Requests err (503) | 0 | **6** |
