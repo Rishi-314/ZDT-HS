@@ -18,7 +18,7 @@ Identical to Stage 2 Experiment C:
 
 ## Results
 
-| Metric | Stage 2 (naive) | Stage 3 (fixed) | Improvement |
+| Metric | Stage 2 (Acumos Baseline) | Stage 3 (fixed) | Improvement |
 |---|---|---|---|
 | Requests       | 550,022 | 249,539 | — |
 | Throughput     | 4,502 r/s | 1,812 r/s | see note |
