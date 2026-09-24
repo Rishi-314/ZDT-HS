@@ -10,7 +10,7 @@ Re-run Stage 2's isolated pinning proof (Finding 04) against the
 Stage 3 protocol with timeout-based forced eviction (T = 2000 ms,
 watchdog sweep interval = 1000 ms).
 
-## Before (Finding 04, naive build)
+## Before (Finding 04, ACUMOS)
 
 | Point | active v1 | marked v1 | evict |
 |---|---|---|---|
